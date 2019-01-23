@@ -26,13 +26,55 @@ import socketserver
 
 # try: curl -v -X GET http://127.0.0.1:8080/
 
+responseCodeInfo = {
+    200: "OK",
+    403: "FORBIDDEN",
+    404: "NOT FOUND",
+    500: "INTERNAL SERVER ERROR"
+}
+
+responseTemplate = ""
+responseTemplate += "HTTP/1.1 {STATUS} {STATUS_DESC}\r\n"
+responseTemplate += "Connection: close\r\n"
+responseTemplate += "\r\n"
+responseTemplate += "{CONTENT}"
 
 class MyWebServer(socketserver.BaseRequestHandler):
+    def doResponse(self, status, content):
+        # protect from explosions
+        if status not in responseCodeInfo:
+            content = "Error: Attempted to use a status code not in the response dictionary ({STATUS}).".format(STATUS=status)
+            status = 500
+
+        response = responseTemplate.format(
+            STATUS=status,
+            STATUS_DESC=responseCodeInfo[status],
+            CONTENT=content
+        )
+
+        self.request.sendall(bytearray(response, "utf-8"))
     
     def handle(self):
         self.data = self.request.recv(1024).strip()
-        print ("Got a request of: %s\n" % self.data)
-        self.request.sendall(bytearray("OK",'utf-8'))
+        decoded_string = self.data.decode()
+        print("RECEIVED:\n***")
+        print(decoded_string)
+        print("***")
+        # split_decode = decoded_string.split()
+        # method = split_decode[0]
+        # location = split_decode[1]
+
+        # f = open("www/index.html", "r")
+        # lines = f.read()
+        # f.close()
+        # lines = lines.encode("utf-8")
+        # print("SENDING:\n***")
+        # print(lines)
+        # print("***")
+
+        # if (method != "GET"):
+        #     pass
+        self.doResponse(220, "Hello World!")
 
 if __name__ == "__main__":
     HOST, PORT = "localhost", 8080

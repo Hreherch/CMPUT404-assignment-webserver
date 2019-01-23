@@ -24,3 +24,8 @@ examples thus some of the code is Copyright © 2001-2013 Python
 Software Foundation; All Rights Reserved under the PSF license (GPL
 compatible) http://docs.python.org/2/library/socketserver.html
 
+Resources
+=========
+
+https://stackoverflow.com/questions/47784859/python-not-able-to-make-web-server
+what to send back
