@@ -1,5 +1,6 @@
 #  coding: utf-8 
 import socketserver
+from os import path
 
 # Copyright 2013 Abram Hindle, Eddie Antonio Santos
 # 
@@ -33,48 +34,73 @@ responseCodeInfo = {
     500: "INTERNAL SERVER ERROR"
 }
 
-responseTemplate = ""
-responseTemplate += "HTTP/1.1 {STATUS} {STATUS_DESC}\r\n"
-responseTemplate += "Connection: close\r\n"
-responseTemplate += "\r\n"
-responseTemplate += "{CONTENT}"
-
 class MyWebServer(socketserver.BaseRequestHandler):
-    def doResponse(self, status, content):
+    def do404(self):
+        return self.doResponse("<h1>Error 404: Page Not Found</h1>", status=404)
+
+    def doResponse(self, content, status=200, headers={}):
         # protect from explosions
         if status not in responseCodeInfo:
             content = "Error: Attempted to use a status code not in the response dictionary ({STATUS}).".format(STATUS=status)
             status = 500
 
-        response = responseTemplate.format(
+        responseTemplate = ""
+        responseTemplate += "HTTP/1.1 {STATUS} {STATUS_DESC}\r\n".format(
             STATUS=status,
-            STATUS_DESC=responseCodeInfo[status],
+            STATUS_DESC=responseCodeInfo[status]
+        )
+        responseTemplate += "Connection: close\r\n"
+        # add headers
+        for key in headers:
+            if len(key) and len(headers[key]):
+                responseTemplate += "{KEY}: {VALUE}\r\n".format(
+                    KEY=key,
+                    VALUE=headers[key]
+                )
+        responseTemplate += "\r\n"
+        responseTemplate += "{CONTENT}".format(
             CONTENT=content
         )
 
-        self.request.sendall(bytearray(response, "utf-8"))
+        self.request.sendall(bytearray(responseTemplate, "utf-8"))
     
     def handle(self):
         self.data = self.request.recv(1024).strip()
         decoded_string = self.data.decode()
-        print("RECEIVED:\n***")
-        print(decoded_string)
-        print("***")
-        # split_decode = decoded_string.split()
-        # method = split_decode[0]
-        # location = split_decode[1]
-
-        # f = open("www/index.html", "r")
-        # lines = f.read()
-        # f.close()
-        # lines = lines.encode("utf-8")
-        # print("SENDING:\n***")
-        # print(lines)
+        split_string = decoded_string.split()
+        # print("RECEIVED:\n***")
+        # print(decoded_string)
         # print("***")
+        method = split_string[0]
+        dest = split_string[1]
 
-        # if (method != "GET"):
-        #     pass
-        self.doResponse(220, "Hello World!")
+        if (method != "GET"):
+            return self.doResponse("Error: You may only use GET with this webserver.")
+        #print("TO ACCESS WITH", method, "\b:", dest)
+        dest = "./www" + dest
+
+        if not path.isfile(dest):
+            #print(dest, "is not file!")
+            if not path.isdir(dest):
+                #print(dest, "is not dir!")
+                return self.do404()
+            else:
+                if dest[-1] != "/":
+                    dest += "/"
+                dest += "index.html"
+                if not path.isfile(dest):
+                    #print(dest, "still not file!")
+                    return self.do404()
+
+        if "www/" not in path.abspath(dest):
+            return self.do404()
+        
+        f = open(dest, "r")
+        fileData = f.read()
+        f.close()
+        contentType = "text/" + dest.split(".")[-1]
+        headers = {"Content-Type": contentType}
+        self.doResponse(fileData, headers=headers)
 
 if __name__ == "__main__":
     HOST, PORT = "localhost", 8080
