@@ -27,5 +27,7 @@ compatible) http://docs.python.org/2/library/socketserver.html
 Resources
 =========
 
+Googled and read from the following Stack Overflow post
 https://stackoverflow.com/questions/47784859/python-not-able-to-make-web-server
-what to send back
+THe post helped me realize that I need to send headers back, and from there
+I did a bunch of trial and error.

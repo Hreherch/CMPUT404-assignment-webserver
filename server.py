@@ -29,8 +29,9 @@ from os import path
 
 responseCodeInfo = {
     200: "OK",
-    403: "FORBIDDEN",
-    404: "NOT FOUND",
+    301: "Moved Permanently",
+    404: "Not Found",
+    405: "Method Not Allowed",
     500: "INTERNAL SERVER ERROR"
 }
 
@@ -75,23 +76,37 @@ class MyWebServer(socketserver.BaseRequestHandler):
         dest = split_string[1]
 
         if (method != "GET"):
-            return self.doResponse("Error: You may only use GET with this webserver.")
+            return self.doResponse("Error: You may only use GET with this webserver.", status=405)
         #print("TO ACCESS WITH", method, "\b:", dest)
         dest = "./www" + dest
 
+        # Check if we are going to a file
         if not path.isfile(dest):
-            #print(dest, "is not file!")
+            # if not a file, check if it's a directory
             if not path.isdir(dest):
-                #print(dest, "is not dir!")
-                return self.do404()
+                return self.do404() # not either, send 404
             else:
-                if dest[-1] != "/":
-                    dest += "/"
-                dest += "index.html"
-                if not path.isfile(dest):
-                    #print(dest, "still not file!")
+                # attempt to find an index file in the directory
+                fixDest = dest
+                if fixDest[-1] != "/":
+                    fixDest += "/"
+                fixDest = fixDest + "index.html"
+                if not path.isfile(fixDest):
+                    # no index file in the directory, 404
                     return self.do404()
+                else:
+                    # There is an index file in the directory
+                    if dest[-1] != "/":
+                        # There was no /, inform with 301
+                        headers = {
+                            "Location": dest[5:] + "/"
+                        }
+                        return self.doResponse("", status=301, headers=headers)
+                    else:
+                        dest = fixDest
 
+        # Check that we're inside www/ in some way using abspath
+        # hopefully you don't have a www folder in a lower level...
         if "www/" not in path.abspath(dest):
             return self.do404()
         
